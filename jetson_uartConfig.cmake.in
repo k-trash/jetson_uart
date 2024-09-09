@@ -1,0 +1,14 @@
+# - Config file for the jetson_uart package
+# It defines the following variables
+#  jetson_uart_INCLUDE_DIRS - include directories for FooBar
+#  jetson_uart_LIBRARIES    - libraries to link against
+#  jetson_uart_EXECUTABLE   - the bar executable
+
+set(jetson_uart_INCLUDE_DIRS "@CONF_INCLUDE_DIRS@")
+
+# Our library dependencies (contains definitions for IMPORTED targets)
+include("${jetson_uart_DIR}/export_jetson_uart.cmake")
+
+# These are IMPORTED targets created by jetson_uartTargets.cmake
+
+
