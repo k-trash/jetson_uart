@@ -1,41 +1,54 @@
-#include <jetson_uart/jetson_uart.hpp>
-
 #include <rclcpp/rclcpp.hpp>
 #include <can_msgs/msg/frame.hpp>
-#include <rclcpp_components/register_node_macro.hpp>
 
-#include <serial_connect.hpp>
+#include <serial_connect/serial_connect.hpp>
 
-namespace jetson_uart_node{
-	void JetsonToUart::JetsonToUart(const rclcpp::NodeOptions options_) : rclcpp::Node("jetson_uart_node", options_){
-		msg_sub = this->create_subscription<can_msgs::msg::Frame>("/can_tx", 10, std::bind(&JetsonToUart::canmsgCallback, this, std::placeholder::_1));
-		msg_pub = this->create_publisher<can_msgs::msg::Frame>("/can_rx", 10);
+rclcpp::Node::SharedPtr node;
+rclcpp::Subscription<can_msgs::msg::Frame>::SharedPtr msg_sub;
+rclcpp::Publisher<can_msgs::msg::Frame>::SharedPtr msg_pub;
 
-		serial.setSerial("/dev/ttyACM0", 115200);
-		serial.openSerial();
-		serial.setInterrupt(&JoyToUart::uartCallback);
-	}
+SerialConnect serial;
 
-	void JetsonToUart::~JetsonToUart(void){
-		serial.closeSerial();
-	}
-
-	void JetsonToUart::canmsgCallback(const can_msgs::msg::Frame::SharedPtr msg_){
-		if(msg_->data[2] == 0x22){
-			serial.writeSerial(msg_->data, 8);
+void canmsgCallback(const can_msgs::msg::Frame::SharedPtr msg_){
+	uint8_t send_data[8] = {0u};
+	if(msg_->id == 0x7D7){
+		for(uint8_t i=0; i<8; i++){
+			send_data[i] = msg_->data[i];
 		}
-	}
 
-	void JetsonToUart::uartCallback(int status_){
-		if(serial.readSerial()){
-			can_msgs::msg::Frame msg;
-
-			msg.header.stamp = this->clock()->now();
-			msg.data = serial.recv_data;
-			
-			msg_pub->publish(msg);
-		}
+		serial.writeSerial(send_data, 8);
 	}
 }
 
-RCLCPP_COMPONENTS_REGISTER_NODE(jetson_uart_node::JetsonToUart)
+void uartCallback(int status_){
+	if(serial.readSerial()){
+		can_msgs::msg::Frame msg;
+
+		msg.header.stamp = node->get_clock()->now();
+		for(uint8_t i=0; i<8; i++){
+			msg.data[i] = serial.recv_data[i];
+		}
+		msg_pub->publish(msg);
+	}
+}
+
+int main(int argc, char *argv[]){
+	rclcpp::init(argc, argv);
+	node = rclcpp::Node::make_shared("throttle_node");
+
+	msg_sub = node->create_subscription<can_msgs::msg::Frame>("/can_tx", 10, &canmsgCallback);
+	msg_pub = node->create_publisher<can_msgs::msg::Frame>("/from_can_bus", 10);
+
+	serial.setSerial("/dev/ttyTHS0", B115200, true);
+	serial.openSerial();
+
+	serial.setInterrupt(&uartCallback);
+
+	rclcpp::spin(node);
+
+	rclcpp::shutdown();
+
+	serial.closeSerial();
+
+	return 0;	
+}

@@ -7,13 +7,16 @@
   <maintainer email="k.trash.t@gmail.com">k-trash</maintainer>
   <license>TODO: License declaration</license>
 
-  <buildtool_depend>ament_cmake_ros<buildtool_depend>
+  <buildtool_depend>ament_cmake_ros</buildtool_depend>
 
   <depend>ament_cmake_auto</depend>
   <depend>rclcpp</depend>
   <depend>can_msgs</depend>
   <depend>serial_connect</depend>
-
+  
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+ 
   <export>
     <build_type>ament_cmake</build_type>
   </export>
